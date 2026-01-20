@@ -2,14 +2,17 @@ from datetime import date
 from app.db.mongo import get_collection
 from app.models.rule_based import predict_home_win, predict_over_under, predict_btts
 from app.services.ranking import rank_predictions
+from app.config.settings import settings
 import math
 
 def predict_today():
     fixtures_col = get_collection("fixtures")
     today = date.today().isoformat()
 
+    # Filter by date AND tracked leagues
     fixtures = fixtures_col.find({
-        "fixture.date": {"$regex": f"^{today}"}
+        "fixture.date": {"$regex": f"^{today}"},
+        "league.name": {"$in": settings.TRACKED_LEAGUES}
     })
 
     predictions = []
@@ -60,5 +63,5 @@ def predict_today():
             upsert=True
         )
 
-    # Return ranked top 10
-    return rank_predictions(predictions, limit=10)
+    # Return ranked predictions (with configurable limit)
+    return rank_predictions(predictions, limit=settings.PREDICTION_LIMIT)
