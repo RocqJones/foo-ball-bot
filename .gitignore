@@ -1,0 +1,12 @@
+.env
+venv/
+app/__pycache__/
+app/config/__pycache__/
+app/data_sources/__pycache__/
+app/db/__pycache__/
+app/features/__pycache__/
+app/jobs/__pycache__/
+app/models/__pycache__/
+app/services/__pycache__/
+*.pyc
+.DS_Store
