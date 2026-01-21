@@ -51,13 +51,18 @@ def analyze_predictions(predictions: List[Dict]) -> Dict:
     ].to_dict('records')
     
     # Best value bets (positive value score + decent probability)
-    best_value = df[
-        df['value_score'].notna() &
-        (df['value_score'] > 0.15) &
-        (df['home_win_probability'] >= 0.65)
-    ].nlargest(5, 'value_score')[
-        ['match', 'home_win_probability', 'value_score', 'home_win_confidence']
-    ].to_dict('records')
+    # Filter out None values and convert to numeric
+    df_with_value = df[df['value_score'].notna()].copy()
+    if len(df_with_value) > 0:
+        df_with_value['value_score'] = pd.to_numeric(df_with_value['value_score'], errors='coerce')
+        best_value = df_with_value[
+            (df_with_value['value_score'] > 0.15) &
+            (df_with_value['home_win_probability'] >= 0.65)
+        ].nlargest(5, 'value_score')[
+            ['match', 'home_win_probability', 'value_score', 'home_win_confidence']
+        ].to_dict('records')
+    else:
+        best_value = []
     
     # Summary statistics
     summary = {
@@ -97,12 +102,15 @@ def get_top_picks(predictions: List[Dict], limit: int = 10) -> List[Dict]:
     df = pd.DataFrame(predictions)
     df['goals_probability'] = df['goals_prediction'].apply(lambda x: x['probability'])
     
+    # Handle value_score with None values properly
+    df['value_score_numeric'] = pd.to_numeric(df['value_score'], errors='coerce').fillna(0).clip(lower=0)
+    
     # Composite score
     df['composite_score'] = (
         df['home_win_probability'] * 0.4 +
         df['goals_probability'] * 0.3 +
         df['btts_probability'] * 0.2 +
-        df['value_score'].fillna(0).clip(lower=0) * 0.1  # Only positive value scores, treat missing as 0
+        df['value_score_numeric'] * 0.1  # Only positive value scores, treat missing as 0
     )
     
     top_picks = df.nlargest(limit, 'composite_score')[

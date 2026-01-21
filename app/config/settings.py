@@ -22,4 +22,10 @@ class Settings:
     # Default prediction limit (None = no limit)
     PREDICTION_LIMIT = 30
 
+    # Maximum number of fixtures to consider for team stats
+    MAX_FIXTURES = 15
+
+    # Maximum number of days to look back for team stats
+    MAX_DAYS_BACK = 90
+
 settings = Settings()

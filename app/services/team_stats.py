@@ -1,11 +1,12 @@
 """
 Compute basic team statistics from historical fixtures.
 """
+from app.config.settings import Settings
 from app.db.mongo import get_collection
 from datetime import datetime, timedelta
 
 
-def compute_team_stats_from_fixtures(team_id: int, league_id: int = None, days_back: int = 90, max_fixtures: int = 10):
+def compute_team_stats_from_fixtures(team_id: int, league_id: int = None, days_back: int = Settings.MAX_DAYS_BACK, max_fixtures: int = Settings.MAX_FIXTURES):
     """
     Compute simple stats for a team from recent fixtures.
     
