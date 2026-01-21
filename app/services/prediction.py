@@ -4,6 +4,7 @@ from app.models.rule_based import predict_home_win, predict_over_under, predict_
 from app.services.ranking import rank_predictions
 from app.services.team_stats import compute_team_stats_from_fixtures
 from app.config.settings import settings
+from pymongo import UpdateOne
 import math
 import random
 
@@ -105,7 +106,6 @@ def predict_today():
 
     # Persist all predictions to Mongo using bulk write for better performance
     if predictions:
-        from pymongo import UpdateOne
         predictions_col = get_collection("predictions")
         bulk_operations = [
             UpdateOne(
