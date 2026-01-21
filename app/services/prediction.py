@@ -7,6 +7,26 @@ from pymongo import UpdateOne
 import math
 import random
 
+def get_persisted_predictions_today():
+    """
+    Retrieve persisted predictions for today from the database.
+    This avoids expensive regeneration of predictions on every API call.
+    
+    Returns:
+        List of prediction documents for today. Returns empty list if no predictions
+        are found in the database. Callers should handle empty results appropriately
+        (e.g., by calling predict_today() first to generate predictions).
+    """
+    predictions_col = get_collection("predictions")
+    today = date.today().isoformat()
+    
+    predictions = list(predictions_col.find(
+        {"created_at": today},
+        {"_id": 0}  # Exclude MongoDB's _id field
+    ))
+    
+    return predictions
+
 def predict_today():
     fixtures_col = get_collection("fixtures")
     today = date.today().isoformat()
