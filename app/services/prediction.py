@@ -80,7 +80,7 @@ def predict_today():
 
         # Confidence levels
         home_confidence = "HIGH" if home_win_prob >= 0.8 else "MEDIUM" if home_win_prob >= 0.65 else "LOW"
-        btts_confidence = "HIGH" if btts_prob >= 0.7 else "MEDIUM" if btts_prob >= 0.55 else "LOW"
+        btts_confidence = "HIGH" if btts_prob >= 0.75 else "MEDIUM" if btts_prob >= 0.60 else "LOW"
 
         # Optional value score placeholder (market probability vs model)
         market_home_prob = f.get("odds", {}).get("home_win", 0.5)  # fallback if missing
