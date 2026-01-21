@@ -3,7 +3,7 @@ from app.services.prediction import predict_today, get_persisted_predictions_tod
 from app.services.ranking import rank_predictions
 from app.services.analysis import analyze_predictions, get_top_picks
 
-app = FastAPI(title="Foo Ball Bot")
+app = FastAPI(title="Foo Ball Service")
 
 @app.get("/health")
 def health():
