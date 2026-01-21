@@ -82,9 +82,14 @@ def predict_today():
         home_confidence = "HIGH" if home_win_prob >= 0.8 else "MEDIUM" if home_win_prob >= 0.65 else "LOW"
         btts_confidence = "HIGH" if btts_prob >= 0.75 else "MEDIUM" if btts_prob >= 0.60 else "LOW"
 
-        # Optional value score placeholder (market probability vs model)
-        market_home_prob = f.get("odds", {}).get("home_win", 0.5)  # fallback if missing
-        value_score = round(home_win_prob - market_home_prob, 3)
+        # Optional value score (market probability vs model) - only when market odds are available
+        odds = f.get("odds")
+        if odds and "home_win" in odds:
+            market_home_prob = odds["home_win"]
+            value_score = round(home_win_prob - market_home_prob, 3)
+        else:
+            market_home_prob = None
+            value_score = None
 
         prediction_doc = {
             "fixture_id": f["fixture"]["id"],
