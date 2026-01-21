@@ -1,8 +1,41 @@
 # Foo Ball Bot
 
-A small football (soccer) data + predictions service.
+## What it does
 
-It ingests fixtures from the **API-Football** API into **MongoDB**, then generates simple **rule-based predictions** for today’s matches and serves them via a **FastAPI** API.
+- **Ingest fixtures** for a given date from API-Football → stores documents in MongoDB `fixtures` collection.
+- **Predict today's matches** from stored fixtures:
+  - Home win probability with confidence levels (HIGH/MEDIUM/LOW)
+  - **Smart over/under 2.5 goals recommendation** (automatically picks best bet: Over or Under)
+  - **BTTS (Both Teams To Score)** probability - predicts if both teams will score at least 1 goal each
+  - Value score (model probability vs market odds)
+- **Pandas-powered analysis** to extract best bets by category
+- **Filter by league name** using a configurable allow-list (example: Premier League, UCL).
+- Expose results via REST endpoints.
+
+### Prediction Metrics Explained
+
+- **Home Win Probability**: Likelihood that the home team wins (considers form, goal difference, home advantage)
+- **Goals Prediction**: Automatically recommends either "Over 2.5" or "Under 2.5" goals based on:
+  - Both teams' attacking strength (goals_for)
+  - Both teams' defensive weakness (goals_against)
+  - Expected total goals in the match
+- **BTTS (Both Teams To Score)**: Probability that BOTH teams score at least 1 goal each
+  - High probability = Expect both teams to find the net
+  - Based on weakest link principle (minimum scoring potential of both teams)
+- **Confidence Levels**:
+  - HIGH: ≥ 75% probability (strong conviction)
+  - MEDIUM: 60-74% probability (moderate conviction)
+  - LOW: < 60% probability (uncertain)otball (soccer) data + predictions service.
+
+It ingests fixtures from the **API-Football** API into **MongoDB**, then generates s### Empty predictions
+
+Common causes:
+
+- You haven't ingested fixtures for today yet.
+- Your `TRACKED_LEAGUES` list doesn't match the exact league names in fixture docs.
+- Fixtures are stored under a different date/time format than expected.
+
+**Note:** The API-Football API returns multiple leagues with the same name (e.g., "Premier League" for England, Ethiopia, etc.). Consider filtering by both `league.name` AND `league.country` if you want specific leagues only.*rule-based predictions** for today’s matches and serves them via a **FastAPI** API.
 
 > This repo currently focuses on “good enough” automation (scheduled ingestion + predictions API). There’s no GUI—configuration lives in `app/config/settings.py` and/or `.env`.
 
@@ -115,11 +148,41 @@ Open the interactive docs:
 
 - `GET /health` — basic health check
 - `GET /predictions/today` — generates + returns ranked predictions for today
+- `GET /predictions/analysis` — pandas-powered analysis with best bets by category
+- `GET /predictions/top-picks?limit=10` — top picks using composite scoring
 
-Example response shape:
+Example response shape for `/predictions/today`:
 
-- `count`: number of predictions returned
-- `predictions`: list of prediction docs
+```json
+{
+  "count": 30,
+  "predictions": [{
+    "fixture_id": 1482325,
+    "match": "Welwalo Adigrat Uni vs Sheger Ketema",
+    "league": "Premier League",
+    "home_team": "Welwalo Adigrat Uni",
+    "away_team": "Sheger Ketema",
+    "home_win_probability": 0.988,
+    "home_win_confidence": "HIGH",
+    "goals_prediction": {
+      "bet": "Under 2.5",
+      "probability": 0.682,
+      "confidence": "MEDIUM"
+    },
+    "btts_probability": 0.592,
+    "btts_confidence": "MEDIUM",
+    "value_score": 0.488,
+    "created_at": "2026-01-21"
+  }]
+}
+```
+
+The `/predictions/analysis` endpoint provides:
+- `best_home_wins` — top 5 high-confidence home win predictions
+- `best_goals_bets` — top 5 over/under 2.5 predictions with clear recommendations
+- `best_btts` — top 5 both teams to score predictions
+- `best_value_bets` — top 5 predictions with positive value scores
+- `summary` — statistics including league distribution, confidence levels, etc.
 
 ## Data & collections
 
@@ -129,7 +192,19 @@ Collections currently used:
 
 - `fixtures` — raw fixture docs from API-Football (stored with upsert on `fixture_id`)
 - `predictions` — stored predictions (upsert on `fixture_id`)
-- `team_stats` — optional; if missing for a team, prediction uses fallback defaults
+- `team_stats` — **optional**; if present, used for predictions; otherwise, seeded random stats are generated per team
+
+### About team stats fallback
+
+When `team_stats` collection is empty (no historical data), the prediction service generates **seeded random stats** for each team based on their `team_id`. This ensures:
+
+- Predictions are **diverse** (not identical)
+- Predictions are **consistent** (same team always gets same stats until you populate real data)
+
+To populate real stats, you can:
+1. Build a backfill job that calls `compute_team_stats_from_fixtures()` (see `app/services/team_stats.py`)
+2. Manually insert team performance data into the `team_stats` collection
+3. Integrate live team statistics from API-Football
 
 ## Troubleshooting
 
@@ -170,3 +245,16 @@ Common causes:
 - Add a CLI command for ingestion and backfills (date ranges)
 - Enrich `team_stats` ingestion and remove fallback defaults
 - Add tests (ranking, prediction edge cases)
+
+## Glossary
+
+| Term | Meaning |
+|------|---------|
+| **BTTS** | Both Teams To Score (at least 1 goal each) |
+| **Over 2.5** | Match will have 3 or more total goals |
+| **Under 2.5** | Match will have 2 or fewer total goals |
+| **HIGH** | ≥75% probability (strong conviction) |
+| **MEDIUM** | 60-74% probability (moderate conviction) |
+| **LOW** | <60% probability (uncertain) |
+| **Value Score** | Difference between model probability and market odds |
+| **Form** | Team's recent performance (points per game average) |
