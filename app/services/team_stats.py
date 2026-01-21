@@ -5,13 +5,23 @@ from app.db.mongo import get_collection
 from datetime import datetime, timedelta
 
 
-def compute_team_stats_from_fixtures(team_id: int, league_id: int = None, days_back: int = 90):
+def compute_team_stats_from_fixtures(team_id: int, league_id: int = None, days_back: int = 90, max_fixtures: int = 10):
     """
     Compute simple stats for a team from recent fixtures.
+    
+    Args:
+        team_id: ID of the team to compute stats for
+        league_id: Optional league ID to filter fixtures by a specific league
+        days_back: Number of days to look back for fixtures (default: 90)
+        max_fixtures: Maximum number of most recent fixtures to include in stats calculation (default: 10)
     
     Returns:
         dict with keys: form, goals_for, goals_against, games_played
         Returns None if no fixtures found.
+    
+    Note:
+        Even if a team has played more matches within the `days_back` period,
+        only the `max_fixtures` most recent matches will be used for statistics calculation.
     """
     fixtures_col = get_collection("fixtures")
     
@@ -30,7 +40,7 @@ def compute_team_stats_from_fixtures(team_id: int, league_id: int = None, days_b
     if league_id:
         query["league.id"] = league_id
     
-    fixtures = list(fixtures_col.find(query).sort("fixture.date", -1).limit(10))
+    fixtures = list(fixtures_col.find(query).sort("fixture.date", -1).limit(max_fixtures))
     
     if not fixtures:
         return None
