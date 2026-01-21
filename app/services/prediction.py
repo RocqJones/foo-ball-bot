@@ -103,13 +103,19 @@ def predict_today():
 
         predictions.append(prediction_doc)
 
-        # Persist prediction to Mongo
+    # Persist all predictions to Mongo using bulk write for better performance
+    if predictions:
+        from pymongo import UpdateOne
         predictions_col = get_collection("predictions")
-        predictions_col.update_one(
-            {"fixture_id": f["fixture"]["id"]},
-            {"$set": prediction_doc},
-            upsert=True
-        )
+        bulk_operations = [
+            UpdateOne(
+                {"fixture_id": pred["fixture_id"]},
+                {"$set": pred},
+                upsert=True
+            )
+            for pred in predictions
+        ]
+        predictions_col.bulk_write(bulk_operations)
 
     # Return ranked predictions (with configurable limit)
     return rank_predictions(predictions, limit=settings.PREDICTION_LIMIT)
