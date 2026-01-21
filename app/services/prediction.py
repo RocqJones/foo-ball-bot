@@ -2,7 +2,6 @@ from datetime import date
 from app.db.mongo import get_collection
 from app.models.rule_based import predict_home_win, predict_over_under, predict_btts
 from app.services.ranking import rank_predictions
-from app.services.team_stats import compute_team_stats_from_fixtures
 from app.config.settings import settings
 import math
 import random
