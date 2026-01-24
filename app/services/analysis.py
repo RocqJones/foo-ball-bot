@@ -92,7 +92,7 @@ def analyze_predictions(predictions: List[Dict]) -> Dict:
     }
 
 
-def get_top_picks(predictions: List[Dict], limit: int = Settings.DEFAULT_LIMIT) -> List[Dict]:
+def get_top_picks(predictions: List[Dict], limit: int) -> List[Dict]:
     """
     Get top picks using a composite scoring system.
     
