@@ -72,7 +72,6 @@ def predict_today():
         query["$or"] = league_entry_filters
 
     fixtures = list(fixtures_col.find(query))
-    print(f"Query: {query}")
 
     if not fixtures:
         return []
