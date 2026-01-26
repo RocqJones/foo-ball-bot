@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone, timedelta
 from app.db.mongo import get_collection
-from app.models.rule_based import predict_home_win, predict_over_under, predict_btts
+from app.models.rule_based import predict_match_outcome, predict_over_under, predict_btts
 from app.services.ranking import rank_predictions
 from app.config.settings import settings
 from pymongo import UpdateOne
@@ -114,8 +114,9 @@ def predict_today():
                 "goals_against": round(random.uniform(0.6, 2.2), 2)  # Average ~1.4
             }
 
-        # Compute probabilities
-        home_win_prob = predict_home_win(home_stats, away_stats)
+        # Compute probabilities for all match outcomes (home win, draw, away win)
+        home_win_prob, draw_prob, away_win_prob = predict_match_outcome(home_stats, away_stats)
+        
         over_2_5_prob = predict_over_under(home_stats, away_stats, line=2.5)
         under_2_5_prob = 1 - over_2_5_prob  # Complement probability
         btts_prob = predict_btts(home_stats, away_stats)
@@ -134,9 +135,20 @@ def predict_today():
                 "confidence": "HIGH" if under_2_5_prob >= 0.75 else "MEDIUM" if under_2_5_prob >= 0.60 else "LOW"
             }
 
-        # Confidence levels
-        home_confidence = "HIGH" if home_win_prob >= 0.8 else "MEDIUM" if home_win_prob >= 0.65 else "LOW"
+        # Confidence levels for all outcomes
+        home_win_confidence = "HIGH" if home_win_prob >= 0.6 else "MEDIUM" if home_win_prob >= 0.45 else "LOW"
+        away_win_confidence = "HIGH" if away_win_prob >= 0.6 else "MEDIUM" if away_win_prob >= 0.45 else "LOW"
+        draw_confidence = "HIGH" if draw_prob >= 0.4 else "MEDIUM" if draw_prob >= 0.30 else "LOW"
         btts_confidence = "HIGH" if btts_prob >= 0.75 else "MEDIUM" if btts_prob >= 0.60 else "LOW"
+
+        # Determine the most likely outcome
+        outcomes = {
+            "home_win": home_win_prob,
+            "draw": draw_prob,
+            "away_win": away_win_prob
+        }
+        best_outcome = max(outcomes, key=outcomes.get)
+        best_outcome_prob = outcomes[best_outcome]
 
         # Optional value score (market probability vs model) - only when market odds are available
         odds = f.get("odds")
@@ -154,7 +166,13 @@ def predict_today():
             "home_team": home['name'],
             "away_team": away['name'],
             "home_win_probability": round(home_win_prob, 3),
-            "home_win_confidence": home_confidence,
+            "home_win_confidence": home_win_confidence,
+            "away_win_probability": round(away_win_prob, 3),
+            "away_win_confidence": away_win_confidence,
+            "draw_probability": round(draw_prob, 3),
+            "draw_confidence": draw_confidence,
+            "predicted_outcome": best_outcome.replace("_", " ").title(),
+            "predicted_outcome_probability": round(best_outcome_prob, 3),
             "goals_prediction": goals_prediction,
             "btts_probability": round(btts_prob, 3),
             "btts_confidence": btts_confidence,
