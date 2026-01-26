@@ -185,7 +185,7 @@ def predict_today():
             for pred in predictions
         ]
         predictions_col.bulk_write(bulk_operations)
-        print(f"Created {len(predictions)} predictions for {today_str}")
+        print(f"Saved {len(predictions)} predictions for {today_str}")
 
     # Return ranked predictions (with configurable limit)
     return rank_predictions(predictions, limit=settings.PREDICTION_LIMIT)
