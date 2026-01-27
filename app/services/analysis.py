@@ -34,7 +34,14 @@ def analyze_predictions(predictions: List[Dict]) -> Dict:
         (df['home_win_confidence'] == 'HIGH') & 
         (df['home_win_probability'] >= 0.80)
     ].nlargest(5, 'home_win_probability')[
-        ['match', 'home_win_probability', 'home_win_confidence', 'value_score']
+        [
+            'match',
+            'home_win_probability',
+            'home_win_confidence',
+            'draw_probability',
+            'away_win_probability',
+            'value_score'
+        ]
     ].to_dict('records')
     
     # Best over/under bets (high confidence)
@@ -61,7 +68,14 @@ def analyze_predictions(predictions: List[Dict]) -> Dict:
             (df_with_value['value_score'] > 0.15) &
             (df_with_value['home_win_probability'] >= 0.65)
         ].nlargest(5, 'value_score')[
-            ['match', 'home_win_probability', 'value_score', 'home_win_confidence']
+            [
+                'match',
+                'home_win_probability',
+                'draw_probability',
+                'away_win_probability',
+                'value_score',
+                'home_win_confidence'
+            ]
         ].to_dict('records')
     else:
         best_value = []
@@ -116,8 +130,18 @@ def get_top_picks(predictions: List[Dict], limit: int) -> List[Dict]:
     )
     
     top_picks = df.nlargest(limit, 'composite_score')[
-        ['fixture_id', 'match', 'league', 'home_win_probability', 
-         'goals_prediction', 'btts_probability', 'composite_score', 'created_at']
+        [
+            'fixture_id',
+            'match',
+            'league',
+            'home_win_probability',
+            'draw_probability',
+            'away_win_probability',
+            'goals_prediction',
+            'btts_probability',
+            'composite_score',
+            'created_at'
+        ]
     ].to_dict('records')
     
     # Round composite score for readability

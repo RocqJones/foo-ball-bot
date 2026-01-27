@@ -4,7 +4,11 @@
 
 - **Ingest fixtures** for a given date from API-Football → stores documents in MongoDB `fixtures` collection.
 - **Predict today's matches** from stored fixtures:
-  - Home win probability with confidence levels (HIGH/MEDIUM/LOW)
+  - **Match outcome probabilities** with confidence levels (HIGH/MEDIUM/LOW):
+    - Home win probability
+    - Draw probability
+    - Away win probability
+    - Plus a `predicted_outcome` field showing the most likely result
   - **Smart over/under 2.5 goals recommendation** (automatically picks best bet: Over or Under)
   - **BTTS (Both Teams To Score)** probability - predicts if both teams will score at least 1 goal each
   - Value score (model probability vs market odds)
@@ -14,7 +18,9 @@
 
 ### Prediction Metrics Explained
 
-- **Home Win Probability**: Likelihood that the home team wins (considers form, goal difference, home advantage)
+- **Match outcome probabilities (Home/Draw/Away)**: Likelihood of each result.
+  - These three probabilities are normalized to sum to $1.0$ (100%).
+  - Home advantage is still baked into the model.
 - **Goals Prediction**: Automatically recommends either "Over 2.5" or "Under 2.5" goals based on:
   - Both teams' attacking strength (goals_for)
   - Both teams' defensive weakness (goals_against)
@@ -23,9 +29,15 @@
   - High probability = Expect both teams to find the net
   - Based on the weakest link principle (minimum scoring potential of both teams)
 - **Confidence Levels**:
-  - HIGH: ≥ 75% probability (strong conviction)
-  - MEDIUM: 60-74% probability (moderate conviction)
-  - LOW: < 60% probability (uncertain)
+  - For **Home Win** / **Away Win**:
+    - HIGH: ≥ 60%
+    - MEDIUM: 45–59%
+    - LOW: < 45%
+  - For **Draw**:
+    - HIGH: ≥ 40%
+    - MEDIUM: 30–39%
+    - LOW: < 30%
+  - For **Goals (Over/Under)** and **BTTS**, the previous HIGH/MEDIUM/LOW thresholds still apply.
 
 It ingests fixtures from the **API-Football** API into **MongoDB**, then generates **rule-based predictions** for today’s matches and serves them via a **FastAPI** API.
 
@@ -128,6 +140,7 @@ Open the interactive docs:
 ### Endpoints
 
 - `GET /health` — basic health check
+- `GET /fixtures/ingest` — triggers ingestion for today's fixtures (same as the daily job)
 - `GET /predictions/today` — generates + returns ranked predictions for today
 - `GET /predictions/analysis` — pandas-powered analysis with best bets by category
 - `GET /predictions/top-picks?limit=10` — top picks using composite scoring
@@ -143,8 +156,14 @@ Example response shape for `/predictions/today`:
     "league": "Premier League",
     "home_team": "Welwalo Adigrat Uni",
     "away_team": "Sheger Ketema",
-    "home_win_probability": 0.988,
+    "home_win_probability": 0.741,
     "home_win_confidence": "HIGH",
+    "draw_probability": 0.144,
+    "draw_confidence": "LOW",
+    "away_win_probability": 0.115,
+    "away_win_confidence": "LOW",
+    "predicted_outcome": "Home Win",
+    "predicted_outcome_probability": 0.741,
     "goals_prediction": {
       "bet": "Under 2.5",
       "probability": 0.682,
@@ -234,8 +253,8 @@ Common causes:
 | **BTTS** | Both Teams To Score (at least 1 goal each) |
 | **Over 2.5** | Match will have 3 or more total goals |
 | **Under 2.5** | Match will have 2 or fewer total goals |
-| **HIGH** | ≥75% probability (strong conviction) |
-| **MEDIUM** | 60-74% probability (moderate conviction) |
-| **LOW** | <60% probability (uncertain) |
+| **HIGH** | High confidence (see thresholds above; differs by metric) |
+| **MEDIUM** | Medium confidence (see thresholds above; differs by metric) |
+| **LOW** | Low confidence (see thresholds above; differs by metric) |
 | **Value Score** | Difference between model probability and market odds |
 | **Form** | Team's recent performance (points per game average) |
